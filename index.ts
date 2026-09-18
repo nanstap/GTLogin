@@ -159,6 +159,7 @@ app.all('/player/growid/login/validate', async (req: Request, res: Response) => 
             status: 'success',
             message: 'Account Validated.',
             token,
+            url: '',
             accountType: 'growtopia'
         });
 
